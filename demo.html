@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8">
+    <title></title>
+    <link href="rich-search.css" rel="stylesheet">
+    <script src="jquery-1.4.4.js"></script>
+    <script src="rich-search.js"></script>
+
+    <style>
+        body {
+            font-family: sans-serif;
+        }
+        #results {
+            margin-top: 20px;
+            border: 1px solid #333;
+            border-collapse: collapse;
+            width: 100%;
+        }
+        #results thead {
+            background-color: #333;
+            color: #FFF;
+        }
+        #results th {
+            padding: 5px;
+        }
+        #results tr:nth-child(even) {
+            background-color: #eeeeee;
+        }
+        #results td {
+            border: 1px solid #333;
+            border-top: 0;
+            border-bottom: 0;
+            padding: 0 5px;
+        }
+    </style>
+</head>
+<body>
+    <form>
+        <input type="text" class="rich-search">
+    </form>
+    <table id="results">
+        <thead><tr></tr></thead>
+        <tbody></tbody>
+    </table>
+
+    <script>
+        $(function() {
+            var attributes = {
+                'sponsor': 'Sponsor',
+                'industry': 'Industry',
+                'property_category': 'Product Category',
+                'sport': 'Sport',
+                'property_name': 'Property Name',
+                'country': 'Country',
+                'region': 'Region'
+            };
+
+            var filterMapping = {
+                'Sponsor': 'sponsor',
+                'Industry': 'industry',
+                'Product Category': 'property_category',
+                'Sport': 'sport',
+                'Property Name': 'property_name',
+                'Country': 'country',
+                'Region': 'region'
+            };
+
+            var mapping = {
+                'Industry': 'industry',
+                'Sponsor': 'sponsor',
+                'eck_ssi_deal_country': 'country',
+                'eck_ssi_deal_property_category': 'property_category',
+                'eck_ssi_deal_property_name': 'property_name',
+                'eck_ssi_deal_region': 'region',
+                'eck_ssi_deal_report_date': 'report_date',
+                'eck_ssi_deal_sponsorship_category': 'sponsorship_category',
+                'eck_ssi_deal_sport': 'sport',
+                'eck_ssi_deal_start_date': 'start_date',
+                'eck_ssi_deal_years': 'years'
+            };
+
+            var resultLabels = {
+                'sponsorship_category': 'Sponsorship Category',
+                'sponsor': 'Sponsor',
+                'industry': 'Industry',
+                'property_category': 'Product Category',
+                'sport': 'Sport',
+                'property_name': 'Property Name',
+                'country': 'Country',
+                'region': 'Region',
+                'years': 'Years',
+                'report_date': 'Report Date',
+                'start_date': 'Start Date',
+            };
+
+            var cache = {};
+            function request(filters, complete) {
+                var url = 'http://ssi.local/ssi/search.jsonp?callback=?';
+
+                var query = {};
+                for (var key in filters) {
+                    if (filters.hasOwnProperty(key) && filterMapping[key]) {
+                        query[filterMapping[key]] = filters[key];
+                    }
+                }
+
+                url += '&';
+                for (var name in query) {
+                    if (query.hasOwnProperty(name) && query[name] != '') {
+                        url += name + '=' + encodeURIComponent(query[name].toLowerCase()) + '&';
+                    }
+                }
+                url = url.slice(0, -1);
+
+                if (cache[url]) {
+                    console.log('From cache');
+                    return complete(cache[url]);
+                }
+                else {
+                    $.getJSON(url, (function(cache, url, complete) {
+                        return function(data) {
+
+                            var i = 0, l = data.length, cleanedData = [];
+                            for (;i<l;i++) {
+                                var deal = data[i],
+                                    cleanDeal = {};
+                                for (var key in deal) {
+                                    if (mapping[key]) {
+                                        if (key == 'Industry') cleanDeal[mapping[key]] = deal[key][0];
+                                        else if (key == 'eck_ssi_deal_report_date' || key == 'eck_ssi_deal_start_date') cleanDeal[mapping[key]] = new Date(parseInt(deal[key]) * 1000);
+                                        else if (key == 'eck_ssi_deal_years') cleanDeal[mapping[key]] = parseInt(deal[key]);
+                                        else cleanDeal[mapping[key]] = deal[key];
+                                        cleanedData.push(cleanDeal);
+                                    }
+                                }
+                            }
+
+                            cache[url] = cleanedData;
+                            //console.log(cleanedData);
+                            return complete(cleanedData)
+                        };
+                    })(cache, url, complete));
+                }
+            }
+
+            $('input.rich-search').richSearch({
+                'keys': function(startsWith, inUse, cb) {
+                    var labels = (function(obj){
+                        var vals = [];
+                        for(var key in obj) {
+                            if (obj.hasOwnProperty(key) && $.inArray(obj[key], inUse) === -1) {
+                                vals.push(obj[key]);
+                            }
+                        }
+                        return vals;
+                    })(attributes).sort();
+
+                    return cb(labels);
+                },
+                'values': function(startsWith, key, cb) {
+                    var filters = {};
+                    filters[key] = startsWith;
+                    return request(filters, (function(cb, key){
+                        return function(data) {
+                            var o = {}, i, l = data.length, r = [];
+                            for (i=0; i<l;i+=1) o[data[i][key]] = data[i][key];
+                            for(i in o) r.push(o[i]);
+                            return cb(r.sort());
+                        };
+                    })(cb, filterMapping[key]));
+                }
+            }).parents('form').submit(function(e) {
+                e.preventDefault();
+                var filters = JSON.parse($('input.rich-search', e.target).val());
+
+                //$.getJSON('http://ssi.local/ssi/search.jsonp?callback=?', console.log);
+
+                request(filters, function(data) {
+                    var $table = $('#results');
+                    var $thead = $table.find('thead').first();
+                    var $tbody = $table.find('tbody').first();
+                    var $theadrow = $thead.children('tr').first();
+
+                    $tbody.empty();
+                    $theadrow.empty();
+                    for (var i in data) {
+                        var row = $('<tr>');
+                        for (var key in data[i]) {
+                            if (i == 0) {
+                                $theadrow.append($('<th>').text(resultLabels[key]));
+                                //console.log(i, key);
+                            }
+                            if (data[i][key] instanceof Date) {
+                                row.append($('<td>').html('<time datetime="' + data[i][key].toISOString() + '">' + data[i][key].toDateString() + '</time>'));
+                            }
+                            else {
+                                row.append($('<td>').text(data[i][key]));
+                            }
+
+                        }
+                        $tbody.append(row);
+                    }
+                })
+            });
+        });
+    </script>
+</body>
+</html>
