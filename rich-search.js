@@ -3,108 +3,112 @@
   var DEFAULTS = {
   };
 
-  var RootController = function(el, options) {
-    /*
-    init querycontroller
-    init suggestioncontroller
-    init virtualinputboxcontroller
-     */
+  var RootController = function(form, options) {
+    if (!$.isFunction(options['resolve'])) throw 'options.resolve must be a Function';
 
-    if (!$.isFunction(options['keys']) && !$.isArray(options['keys'])) throw 'options.keys must be an Array or Function';
-    if (!$.isFunction(options['values']) && !$.isPlainObject(options['values'])) throw 'options.values must be an Object or Function';
+    form = $(form);
 
-    var queryController = new QueryController($(el), $(el).parents('form').first());
-    var suggestionController = new SuggestionController(queryController, options['keys'], options['values']);
-    var virtualInputBoxController = new VirtualInputBoxController(el, queryController, suggestionController);
-
-    virtualInputBoxController.build();
+    new FormController(form, options.resolve, function(formController) {
+      var suggestionController = new SuggestionController(formController, options.resolve);
+      new VirtualInputBoxController(form, formController, suggestionController);
+    });
   };
 
-  var QueryController = function(input, form) {
-    /*
-     listens: richsearch:query:newFilter
-     listens: richsearch:query:submit
+  var FormController = function(form, resolve, complete) {
+    var filters = [];
 
-     fires: input.form.submit
-     */
-
-    var filters = {};
-
-    this.queryChanged = function() {
-      input.val(JSON.stringify(filters));
-      form.submit();
+    this.getKeysInUse = function() {
+      var output = [];
+      $.each(filters, function() {
+        if ($(this.inputElement).val()) {
+          output.push(this.label);
+        }
+      });
+      return output;
     };
 
-    this.addFilter = function(key, value) {
-      filters[key] = value;
-      this.queryChanged();
+    this.getFilters = function() {
+      return filters;
     };
 
     this.removeFilter = function(key) {
-      delete filters[key];
-      this.queryChanged();
+      $.each(filters, function() {
+        if (this.label === key) {
+          $(this.inputElement).val(null);
+          changed();
+        }
+      });
     };
 
-    this.getKeysInUse = function() {
-      return Object.keys(filters);
-    };
-  };
-
-  var SuggestionController = function(queryController, keysSource, valuesSource) {
-    this.getKeySuggestions = function(startsWith, cb) {
-      var inUse = queryController.getKeysInUse();
-      if ($.isFunction(keysSource)) {
-        keysSource(startsWith, inUse, cb);
-      }
-      else {
-        var output = [];
-        for (var i in keysSource) {
-          if (keysSource[i].indexOf(startsWith) === 0 && $.inArray(keysSource[i], inUse) === -1) {
-            output.push(keysSource[i]);
-          }
+    this.addFilter = function(key, value, silent) {
+      silent = !!silent;
+      $.each(filters, function(i, filter) {
+        if (filter.label === key) {
+          //$.each(filter.values, function(optionName, optionValue) {
+          //  if (optionValue === value) {
+              $(filter.inputElement).val(value);
+              if (!silent) changed();
+          //  }
+          //});
         }
-        cb(output);
-      }
+      });
     };
 
-    function getValueSuggestions(startsWith, key, cb) {
-      if ($.isFunction(valuesSource)) {
-        valuesSource(startsWith, key, cb);
-      }
-      else {
-        if (valuesSource[key]) {
-          var output = [];
-          for (var i in valuesSource[key]) {
-            if (valuesSource[key][i].indexOf(startsWith) === 0) {
-              output.push(valuesSource[key][i]);
-            }
-          }
-          cb(output);
-        }
-        else {
-          cb([]);
-        }
-      }
+    function isSimpleUserInput(i, input) {
+      return !$(input).is(':file,:button,:submit,:reset,:image,textarea,:disabled,[type=hidden]');
     }
 
+    function changed() {
+      form.submit();
+    }
+
+    var self = this,
+        simpleInputs = form.find(':input').filter(isSimpleUserInput),
+        resolved = 0;
+    simpleInputs.each(function() {
+      var $input = $(this),
+          label = form.find('label[for=' + $input.attr('id') + '], label[for=' + $input.attr('name') + ']').text(),
+          values = {};
+
+      if ($input.is('select')) {
+        $('option', $input).each(function() {
+          var $opt = $(this);
+          if ($opt.val()) values[$opt.val()] = $opt.text();
+        })
+      }
+
+      resolve({
+        label: label,
+        inputElement: $input,
+        values: values
+      }, function(filter) {
+        resolved++;
+        if (filter) filters.push(filter);
+        if (resolved === simpleInputs.length) complete(self);
+      });
+    });
+
+  };
+
+  var SuggestionController = function(formController, resolve) {
     var currentInputElement = null,
         container = null,
         suggestionContainer = $('<div />').addClass('rich-search-suggestions-container'),
         suggestionList = $('<ul />').appendTo(suggestionContainer),
         lastValues = [],
-        closing = false;
+        closing;
 
     /**
      *
      * @param values {Array}
      */
     function buildSuggestionDropdown(values) {
-      if (!$.isArray(values)) throw '"values" must be an array';
+      if (!$.isPlainObject(values)) throw '"values" must be an object';
 
-      if ($.arraysEqual(values, [])) {
+      if ($.isEmptyObject(values)) {
         suggestionContainer.hide();
       }
-      else if ($.arraysEqual(lastValues, values)) {
+      else if (lastValues === values) {
         if (closing) window.clearTimeout(closing);
         suggestionContainer
           .show()
@@ -114,35 +118,88 @@
       }
       else {
         suggestionList.empty();
-        for (var i in values) {
+
+        var items = [];
+        $.each(values, function(name, value) {
+          items.push([name, value]);
+        });
+        items.sort(function(a, b) {
+          a[1].localeCompare(b[1]);
+        });
+
+        $.each(items, function(i, item) {
           suggestionList.append(
             $('<li />')
-              .text(values[i])
+              .text(item[1])
               .bind('click', function (e) {
                 suggestionContainer.hide();
                 currentInputElement.val($(e.target).text());
                 currentInputElement.trigger('richsearch:accept');
               })
-              .addClass(i == 0 ? 'rich-search-active' : '')
+              .data('value', item[0])
           );
-        }
+        });
         if (closing) window.clearTimeout(closing);
         suggestionContainer
           .show()
           .offset({
             left: currentInputElement.offset().left
           });
+        suggestionList.children().first().addClass('rich-search-active');
       }
 
       lastValues = values;
     }
+
+    this.getKeySuggestions = function(startsWith, cb) {
+      var filters = formController.getFilters(),
+          inUse = formController.getKeysInUse(),
+          responses = 0;
+
+      $.each(filters, function(i, filter) {
+        return resolve(filter, function(updatedFilter) {
+          responses++;
+          filters[i] = updatedFilter;
+
+          if (responses === filters.length) {
+            var output = {};
+            $.each(filters, function(j, filter) {
+              if (filter.label.toLowerCase().indexOf(startsWith.toLowerCase()) === 0 && $.inArray(filter.label, inUse) === -1) {
+                output[filter.label] = filter.label;
+              }
+            });
+            return cb(output);
+          }
+        })
+      });
+    };
+
+    this.getValueSuggestions = function(startsWith, key, cb) {
+      var filters = formController.getFilters();
+
+      $.each(filters, function(i, filter) {
+        if (filter.label === key) {
+          return resolve(filter, function(updatedFilter) {
+            filters[i] = updatedFilter;
+
+            var output = {};
+            for (var i in updatedFilter.values) {
+              if (updatedFilter.values[i].toLowerCase().indexOf(startsWith.toLowerCase()) === 0) {
+                output[i] = updatedFilter.values[i];
+              }
+            }
+            return cb(output);
+          });
+        }
+      });
+    };
 
     this.updateSuggestions = function(type, userTyped, key) {
       if (type == 'key') {
         this.getKeySuggestions(userTyped, buildSuggestionDropdown);
       }
       else if (type == 'value') {
-        getValueSuggestions(userTyped, key, buildSuggestionDropdown);
+        this.getValueSuggestions(userTyped, key, buildSuggestionDropdown);
       }
     };
 
@@ -155,18 +212,21 @@
     };
 
     this.navigate = function(direction) {
-      var items = suggestionList.children('li');
-      var active = suggestionList.children('li.rich-search-active');
-      if (active) {
-        var currentIndex = items.index(active);
-      }
-      else {
-        var currentIndex = 0;
-      }
+      var items = suggestionList.children('li'),
+          active = suggestionList.children('li.rich-search-active'),
+          currentIndex,
+          newIndex;
+
+      if (active)
+        currentIndex = items.index(active);
+      else
+        currentIndex = 0;
+
       if (direction == 'down')
-        var newIndex = (currentIndex + 1) % items.length;
+        newIndex = (currentIndex + 1) % items.length;
       else if (direction == 'up')
-        var newIndex = (currentIndex - 1) % items.length;
+        newIndex = (currentIndex - 1) % items.length;
+
       active.removeClass('rich-search-active');
       $(items[newIndex]).addClass('rich-search-active');
     };
@@ -184,7 +244,7 @@
     this.hide = function() {
       closing = window.setTimeout(function() {
         suggestionContainer.hide();
-        closing = false;
+        closing = null;
       }, 250);
     }
 
@@ -192,34 +252,24 @@
 
   /**
    *
-   * @param inputElement Object
-   * @param queryController QueryController
+   * @param $form jQuery
+   * @param formController FormController
    * @param suggestionController SuggestionController
    * @constructor
    */
-  var VirtualInputBoxController = function(inputElement, queryController, suggestionController) {
-    /*
-     listens: input.keyup
+  var VirtualInputBoxController = function($form, formController, suggestionController) {
+    $form.hide();
 
-     fires: richsearch:suggestion:updateValues
-     fires: richsearch:suggestion:updateKeys
-     fires: richsearch:query:newFilter
-     fires: richsearch:query:submit
-     */
-
-    var $e = $(inputElement);
-
-    $e.hide();
-
-    var container = $e.wrap('<div />')
-      .parent()
+    var container = $('<div>')
+      .insertAfter($form)
       .addClass('rich-search-container')
-      .click(function(e) {
+      .click(this, function(e) {
         var $t = $(e.target);
         if ($t.is('div') || $t.is('ul')) {
-          this.focusOnCurrent();
+          e.data.focusOnCurrent();
         }
-      }.bind(this));
+      });
+
     var list = $('<ul />')
       .addClass('rich-search-terms')
       .appendTo(container);
@@ -231,7 +281,28 @@
     };
 
     var workingPairElement = null,
-        state = STATES.WAITING;
+        state = STATES.WAITING,
+        prepopulated = false;
+
+    startNewKey();
+    $.each(formController.getFilters(), function (i, filter) {
+      var $input = $(filter.inputElement);
+      //console.log($input, $input.val());
+      if ($input.val() || $input.val() !== '') {
+        prepopulated = true;
+        acceptUserSubmittedKey(filter.label, true);
+        if (filter.inputElement.is('select')) {
+          acceptUserSubmittedValue(filter.inputElement.find('option[value=' + $input.val() + ']').text(), true);
+        }
+        else {
+          acceptUserSubmittedValue($input.val(), true);
+        }
+      }
+
+      return true;
+    });
+    //if (!prepopulated) transitionState(STATES.INKEY);
+
 
     function buildKeyElement() {
       return $('<input type="text" placeholder="Filter by attributes or search by keywords" size="42" />')
@@ -245,7 +316,7 @@
         .bind('blur', function(e) {
           suggestionController.hide()
         })
-        .bind('keypress  focus', function(e) {
+        .bind('keypress', function(e) {
 
           var backspaces = $(e.target).data('backspaces') || 0;
 
@@ -375,32 +446,44 @@
       inputEl.focus();
     }
 
-    function acceptUserSubmittedKey(key) {
-      suggestionController.getKeySuggestions(key, function(keys) {
+    function acceptUserSubmittedKey(key, force) {
+      if (force) {
         workingPairElement.children('input.rich-search-key').remove();
-        if (keys.length === 0) {
-          workingPairElement.append(
-            $('<span>')
-              .addClass('rich-search-key')
-              .text(key.indexOf(' ') >= 0 ? 'keywords' : 'keyword')
-          );
+        workingPairElement.append(
+          $('<span>')
+            .addClass('rich-search-key')
+            .text(key)
+        );
 
-          acceptUserSubmittedValue(key);
-        }
-        else {
-          workingPairElement.append(
-            $('<span>')
-              .addClass('rich-search-key')
-              .text(key)
-          );
+        transitionState(STATES.INVALUE);
+      }
+      else {
+        suggestionController.getKeySuggestions(key, function (keys) {
+          workingPairElement.children('input.rich-search-key').remove();
+          if (keys.length === 0) {
+            workingPairElement.append(
+              $('<span>')
+                .addClass('rich-search-key')
+                .text(key.indexOf(' ') >= 0 ? 'keywords' : 'keyword')
+            );
 
-          transitionState(STATES.INVALUE);
-        }
+            acceptUserSubmittedValue(key);
+          }
+          else {
+            workingPairElement.append(
+              $('<span>')
+                .addClass('rich-search-key')
+                .text(key)
+            );
 
-      });
+            transitionState(STATES.INVALUE);
+          }
+
+        });
+      }
     }
 
-    function acceptUserSubmittedValue(value) {
+    function acceptUserSubmittedValue(value, silent) {
       var key = workingPairElement.children('span.rich-search-key').text();
 
       workingPairElement.children('input.rich-search-value').remove();
@@ -418,16 +501,17 @@
       workingPairElement.append(
         $('<span>&times;</span>').bind('click', (function(el) {
           return function(e) {
-            queryController.removeFilter(el.children('span.rich-search-key').text())
+            formController.removeFilter(el.children('span.rich-search-key').text());
             $(e.target).unbind('click', e.handle);
             el.remove();
           }
         })(workingPairElement)).addClass('rich-search-close')
       );
 
-      queryController.addFilter(
+      formController.addFilter(
         workingPairElement.children('span.rich-search-key').text(),
-        value
+        value,
+        silent
       );
 
       transitionState(STATES.INKEY);
@@ -448,23 +532,16 @@
       }
     }
 
-    transitionState(STATES.INKEY);
-
     this.focusOnCurrent = function() {
       workingPairElement.children('input').focus();
     }
-
-    this.build = function() {
-
-    };
   };
 
   $.fn.richSearch = function(options) {
     options = $.extend({}, DEFAULTS, options);
 
     return this.each(function() {
-      if (!$(this).is('input[type=text]')) return false;
-      if ($(this).parents('form').length === 0) return false;
+      if (!$(this).is('form')) return false;
       var instance = $.data(this, 'RichSearch');
       if (!instance) {
         instance = new RootController(this, options);
