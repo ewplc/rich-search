@@ -84,6 +84,8 @@ span.rich-search-close {
 	color: #eee;
 	position: absolute;
 	margin: 7px 0 0;
+	max-height: 210px;
+	overflow: auto;
 	
 	ul,
 	li {

@@ -264,8 +264,15 @@
         newIndex = (currentIndex < 0) ? items.length - 1 : currentIndex;
       }
 
+      var newLi = $(items[newIndex]);
+
       active.removeClass('rich-search-active');
-      $(items[newIndex]).addClass('rich-search-active');
+      newLi.addClass('rich-search-active');
+
+      //center the active item within the suggestionContainer when it's long enough to scroll
+      pub.suggestionContainer.scrollTop(
+        pub.suggestionContainer.scrollTop() + newLi.position().top - (pub.suggestionContainer.height()/2) + (newLi.height()/2)
+      );
     };
 
     pub.isOpen = function() {

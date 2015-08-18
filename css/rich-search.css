@@ -74,7 +74,9 @@ span.rich-search-close {
   background: #333;
   color: #eee;
   position: absolute;
-  margin: 7px 0 0; }
+  margin: 7px 0 0;
+  max-height: 210px;
+  overflow: auto; }
   .rich-search-suggestions-container ul,
   .rich-search-suggestions-container li {
     list-style: none;
