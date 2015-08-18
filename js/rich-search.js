@@ -226,7 +226,7 @@
     };
 
     pub.updateSuggestions = function(type, userTyped, key) {
-      console.log(userTyped);
+      // console.log(userTyped);
       if (type == 'key') {
         pub.getKeySuggestions(userTyped, buildSuggestionDropdown);
       }
@@ -655,8 +655,14 @@
         // });
       }
 
+      if (keywordFilter){
+        activeFilterItem.data('state', 'complete');
+      }
+      else {
+        activeFilterItem.data('state', 'edit-value');
+      }
+
       activeFilterItem
-        .data('state', 'edit-value')
         .removeClass('rich-search-new')
         .prepend(
           $('<span />')
@@ -668,8 +674,9 @@
         activeFilterItem.addClass('type-keyword');
         acceptUserSubmittedValue(key);
       }
-
-      switchFilterItem();
+      else {
+        switchFilterItem();
+      }
     }
 
     function acceptUserSubmittedValue(value, silent) {
