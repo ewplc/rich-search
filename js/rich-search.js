@@ -123,11 +123,12 @@
         if (closing){
           window.clearTimeout(closing);
         }
-        pub.suggestionContainer
+        /*pub.suggestionContainer
           .show()
           .offset({
             left: currentInputElement.offset().left
-          });
+          });*/
+        pub.positionSuggestions(currentInputElement);
       }
       else {
         suggestionList.empty();
@@ -145,15 +146,15 @@
             $('<li />')
               .text(item[1])
               .on('click', function(e){
-                $(this).addClass('rich-search-active');
+                $(this).addClass('active');
                 pub.suggestionContainer.hide();
                 currentInputElement.val($(this).text()).trigger('richsearch:accept');
               })
               .on('mouseover mouseout', function(e){
-                suggestionList.children().removeClass('rich-search-hover');
+                suggestionList.children().removeClass('hover');
                 
                 if (e.type == 'mouseover'){
-                  $(this).addClass('rich-search-hover');
+                  $(this).addClass('hover');
                 }
               })
               .data('value', item[0])
@@ -162,20 +163,24 @@
         if (closing){
           window.clearTimeout(closing);
         }
-        pub.suggestionContainer
-          .show()
-          .offset({
-            left: currentInputElement.offset().left,
-            top: currentInputElement.parent().offset().top + currentInputElement.parent().outerHeight()
-          });
+        pub.positionSuggestions(currentInputElement);
 
         //highlight the first suggestion for the Value input field only. The Key field should allow keywords
         // if (inputType == 'value'){
-          // suggestionList.children().first().addClass('rich-search-active');
+          // suggestionList.children().first().addClass('active');
         // }
       }
 
       lastValues = values;
+    }
+
+    pub.positionSuggestions = function(input){
+      pub.suggestionContainer
+        .show()
+        .offset({
+          left: input.offset().left,
+          top: input.parent().offset().top + input.parent().outerHeight()
+        });
     }
 
     pub.getKeySuggestions = function(startsWith, cb) {
@@ -245,9 +250,10 @@
 
     pub.navigate = function(direction) {
       var items = suggestionList.children('li'),
-          active = suggestionList.children('li.rich-search-active'),
+          active = suggestionList.children('li.active'),
           currentIndex,
-          newIndex;
+          newIndex,
+          newLi;
 
       if (active){
         currentIndex = items.index(active);
@@ -264,11 +270,11 @@
         newIndex = (currentIndex < 0) ? items.length - 1 : currentIndex;
       }
 
-      var newLi = $(items[newIndex]);
-
-      active.removeClass('rich-search-active');
-      newLi.addClass('rich-search-active');
-
+      newLi = $(items[newIndex]);
+      
+      active.removeClass('active');
+      newLi.addClass('active');
+      
       //center the active item within the suggestionContainer when it's long enough to scroll
       pub.suggestionContainer.scrollTop(
         pub.suggestionContainer.scrollTop() + newLi.position().top - (pub.suggestionContainer.height()/2) + (newLi.height()/2)
@@ -280,12 +286,12 @@
     };
 
     pub.isSelected = function(){
-      return suggestionList.children('li.rich-search-active').length > 0;
+      return suggestionList.children('li.active').length > 0;
     };
 
     pub.chooseCurrent = function() {
       pub.suggestionContainer.hide();
-      currentInputElement.val(suggestionList.children('li.rich-search-active').text());
+      currentInputElement.val(suggestionList.children('li.active').text());
       currentInputElement.trigger('richsearch:accept');
     };
 
@@ -297,7 +303,7 @@
     };
 
     pub.cleanUp = function(){
-      suggestionList.children('li').removeClass('rich-search-active');
+      suggestionList.children('li').removeClass('active');
     };
 
     return pub;
@@ -316,10 +322,11 @@
     var container = $('<div>')
       .insertAfter($form)
       .addClass('rich-search-container')
-      .click(this, function(e) {
-        var $t = $(e.target);
-        if ($t.is('div') || $t.is('ul')) {
-          e.data.focusOnCurrent();
+      .on('click', function(e){
+        var el = $(e.target);
+
+        if (el.is('div') || el.is('ul')){
+          focusOnCurrent();
         }
       });
 
@@ -329,13 +336,18 @@
 
       //click to edit existing filterItem's
       .on('click', 'li', function(e){
-        if ($(this).hasClass('rich-search-complete')){
+        if ($(this).hasClass('complete')){
           //check if its a keyword filterItem
           if ($(this).hasClass('type-keyword')){
             editPreviousFilterTypeKeyword( $(e.target).parent('li') );
           }
           else {
             editPreviousFilterValue( $(this) );
+          }
+        }
+        else {
+          if ($(this).children('input').length > 0){
+            focusOnSelected($(this));
           }
         }
       });
@@ -415,7 +427,7 @@
 
         default:
           //everything else
-          activeFilterItemValue = (type == 'value') ? activeFilterItem.children('span.rich-search-key').text() : null;
+          activeFilterItemValue = (type == 'value') ? activeFilterItem.children('span.key').text() : null;
           suggestionController.updateSuggestions(type, inputValue, activeFilterItemValue);
           break;
       }
@@ -428,7 +440,7 @@
 
       switch (keyCode){
         case 8://backspace
-          var elementInputKey = filterItem.children('input.rich-search-key');
+          var elementInputKey = filterItem.children('input.key');
           //handle going back to previous filterItem from a empty key field on 'backspace'
           //check if key input field exists (is being edited) && is empty
           if (elementInputKey.length > 0 && !elementInputKey.val()){// && filterItem.data('state', 'edit-key')){
@@ -459,8 +471,8 @@
 
 
     function buildKeyElement() {
-      return $('<input type="text" placeholder="Enter keyword or field name" size="42" />')
-        .addClass('rich-search-input rich-search-key')
+      return $('<input type="text" placeholder="Search by keyword or field" size="42" />')
+        .addClass('input key')
         .on('richsearch:accept', function(e) {
           acceptUserSubmittedKey(e.target.value);
         })
@@ -472,13 +484,13 @@
           //make current selected filter the active one
           activeFilterItem = filterInput.parents('li');
 
-          filterInput.parent('li').addClass('rich-search-focus');
+          filterInput.parent('li').addClass('focus');
           suggestionController.updateSuggestions('key', filterInput.val());
         })
         .on('blur', function(e) {
           var filterInput = $(e.target);
 
-          filterInput.parent('li').removeClass('rich-search-focus');
+          filterInput.parent('li').removeClass('focus');
           suggestionController.hide();
         })
         .on('keyup', function(e) {
@@ -494,7 +506,7 @@
 
       activeFilterItem = $('<li />')
         .data('state', 'new')//tells us how far along the process of adding a filter we are
-        .addClass('rich-search-active rich-search-new')
+        .addClass('active new')
         .append(inputEl)
         // .append($.thinkingIcon())
         .appendTo(list);
@@ -505,7 +517,7 @@
     }
 
     function editPreviousFilterKey(filterItem) {
-      var keyEl = filterItem.children('span.rich-search-key'),
+      var keyEl = filterItem.children('span.key'),
           value = keyEl.text(),
           inputEl = buildKeyElement().val(value);
       
@@ -527,10 +539,10 @@
     }
 
     function editPreviousFilterTypeKeyword(filterItem){
-      var elementSpanValue = filterItem.children('span.rich-search-value');
+      var elementSpanValue = filterItem.children('span.value');
 
       //remove any "AND" operator elements so they don't get printed literally in our input field
-      elementSpanValue.find('span.rich-search-operator').remove();
+      elementSpanValue.find('span.operator').replaceWith(' ');
 
       var keywordValue = elementSpanValue.text();
 
@@ -539,15 +551,15 @@
 
       filterItem
         .removeClass('type-keyword')
-        .children('span.rich-search-key').text(keywordValue).end()
-        .children('input.rich-search-value').remove();
+        .children('span.key').text(keywordValue).end()
+        .children('input.value').remove();
 
       //now that we've updated our Key element to contain the old Value string, let's make it editable
       editPreviousFilterKey(filterItem);
     }
 
     function editPreviousFilterValue(filterItem) {
-      if (list.children('li').hasClass('rich-search-new')){
+      if (list.children('li').hasClass('new')){
         //we havent added a key to this filterItem yet so just remove it
         activeFilterItem.remove();
       }
@@ -555,28 +567,28 @@
       activeFilterItem = filterItem;
       
       activeFilterItem
-        .removeClass('rich-search-active')
-        .addClass('rich-search-incomplete');
+        .removeClass('active')
+        .addClass('incomplete');
       
-      var elementSpanValue = activeFilterItem.children('span.rich-search-value');
+      var elementSpanValue = activeFilterItem.children('span.value');
 
       //remove any "AND" operator elements so they don't get printed literally in our input field
-      elementSpanValue.find('span.rich-search-operator').remove();
+      elementSpanValue.find('span.operator').replaceWith(' ');
 
       var value = elementSpanValue.text().trim(),
           inputEl = createFilterValue();
 
       //remove the selected key from 'filters' array so it will appear as a selectable suggestionController option
-      formController.removeFilter(activeFilterItem.children('span.rich-search-key').text());
+      formController.removeFilter(activeFilterItem.children('span.key').text());
 
       elementSpanValue.remove();
 
       activeFilterItem
         .data('state', 'edit-value')
-        .addClass('rich-search-active')
-        .removeClass('rich-search-complete')
+        .addClass('active')
+        .removeClass('complete')
         .append(inputEl)
-        .children('span.rich-search-close').remove();
+        .children('span.close').remove();
 
       inputEl.val(value).focus();
       suggestionController.updateCurrentInputElement(inputEl);
@@ -585,7 +597,7 @@
 
     function createFilterValue() {
       var inputEl = $('<input type="text">')
-        .addClass('rich-search-input rich-search-value')
+        .addClass('input value')
         .on('richsearch:accept', function(e) {
           acceptUserSubmittedValue(e.target.value);
         })
@@ -597,18 +609,18 @@
           //make current selected filter the active one
           activeFilterItem = filterInput.parents('li');
 
-          filterInput.parent('li').addClass('rich-search-focus');
+          filterInput.parent('li').addClass('focus');
 
           suggestionController.updateSuggestions(
             'value',
             filterInput.val(),
-            activeFilterItem.children('span.rich-search-key').text()
+            activeFilterItem.children('span.key').text()
           );
         })
         .on('blur', function(e) {
           var filterInput = $(e.target);
 
-          filterInput.parent('li').removeClass('rich-search-focus');
+          filterInput.parent('li').removeClass('focus');
           suggestionController.hide();
         })
         .on('keyup', function(e){
@@ -642,12 +654,12 @@
           keywordFilter = false;
 
       if (force) {
-        activeFilterItem.children('input.rich-search-key').remove();
+        activeFilterItem.children('input.key').remove();
         keyText = key;
       }
       else {
         // suggestionController.getKeySuggestions(key, function(keys) {
-          activeFilterItem.children('input.rich-search-key').remove();
+          activeFilterItem.children('input.key').remove();
 
           // if ($.isEmptyObject(keys)) {
             //no suggested key values were found so this will be treated as a keyword filter
@@ -670,10 +682,10 @@
       }
 
       activeFilterItem
-        .removeClass('rich-search-new')
+        .removeClass('new')
         .prepend(
           $('<span />')
-            .addClass('rich-search-key')
+            .addClass('key')
             .text(keyText)
         );
 
@@ -687,16 +699,16 @@
     }
 
     function acceptUserSubmittedValue(value, silent) {
-      var key = activeFilterItem.children('span.rich-search-key').text();
+      var key = activeFilterItem.children('span.key').text();
 
-      activeFilterItem.children('input.rich-search-value').remove();
+      activeFilterItem.children('input.value').remove();
       
       var label = $('<span>')
-        .addClass('rich-search-value')
+        .addClass('value')
         .append($('<span>&times;</span>'));
       
       if (key == 'keyword' || key == 'keywords') {
-        label.html(value.replace(' ', ' <span class="rich-search-operator">AND</span> '));
+        label.html(value.split(' ').join('<span class="operator">AND</span>'));
       }
       else {
         label.text(value);
@@ -705,22 +717,22 @@
 
       activeFilterItem
         .data('state', 'complete')
-        .removeClass('rich-search-active rich-search-incomplete')
-        .addClass('rich-search-complete')
+        .removeClass('active incomplete')
+        .addClass('complete')
         .append(
           $('<span>&times;</span>')
             .on('click', (function(el){
               return function(e){
-                formController.removeFilter(el.children('span.rich-search-key').text());
+                formController.removeFilter(el.children('span.key').text());
                 $(e.target).off('click', e.handle);
                 el.remove();
               }
             })(activeFilterItem))
-            .addClass('rich-search-close')
+            .addClass('close')
         );
 
       formController.addFilter(
-        activeFilterItem.children('span.rich-search-key').text(),
+        activeFilterItem.children('span.key').text(),
         value,
         silent
       );
@@ -741,7 +753,7 @@
       //cleanup suggestions
       suggestionController.cleanUp();
 
-      var incompleteFilter = list.find('.rich-search-incomplete:eq(0)');
+      var incompleteFilter = list.find('.incomplete:eq(0)');
 
       switch (activeFilterItem.data('state')){
         case 'edit-value':
@@ -761,9 +773,13 @@
       }
     }
 
-    this.focusOnCurrent = function() {
-      activeFilterItem.children('input').focus();
-    }
+    var focusOnCurrent = function() {
+      focusOnSelected(activeFilterItem);
+    };
+
+    var focusOnSelected = function(item){
+      item.children('input').focus();
+    };
   };
 
   $.fn.richSearch = function(options) {

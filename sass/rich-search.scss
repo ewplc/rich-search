@@ -1,89 +1,123 @@
+@import "../../global-sass/variables.scss";
 @import "../../global-sass/mixins.scss";
 
 
 .rich-search-container {
-	font-family: Arial;
 	font-size: 16px;
-	border-radius: 21px;
-	padding: 4px;
+	padding: 0;
 	margin: 0 0 12px;
-	@include box-shadow(0 0 8px rgba(#000, .2) inset);
+	
+	@include bp(m){
+		background: #FDFDFD;
+		padding: 4px 7px;
+		border-radius: 26px;
+		@include box-shadow(0 0 8px rgba(#000, .2) inset);
+	}
 }
-
 .rich-search-terms {
 	padding: 0;
-	padding-left: 3px;
 	margin: 0 !important;
-
+	
 	li {
-		background: 0;
+		background: #FFF;
 		color: #000;
-		display: inline-block;
-		margin: 3px;
+		margin: 6px 0;
 		padding: 6px 12px;
 		vertical-align: middle;
 		border: 1px solid #CCC;
 		cursor: text;
 		position: relative;
 		border-radius: 20px;
+		width: 100%;
+		display: block;
 		
-		&.rich-search-focus {
+		&.new,
+		&.active {
+			@include box-shadow(0 2px 1px #EEE inset);
+		}
+		&.focus {
 			border: 1px solid rgba(81, 203, 238, 1);
 			@include box-shadow(0 0 5px rgba(81, 203, 238, 1));
 		}
-		&.rich-search-complete {
+		&.complete {
 			background-color: #333;
 			box-shadow: 0 0 8px rgba(0, 0, 0, .2);
 			color: #FFF;
+			padding-top: 8px;
+			padding-bottom: 8px;
 			border-color: transparent;
 			box-shadow: none;
 			cursor: pointer;
 		}
 	}
-	.rich-search-input {
-		font-family: Arial;
+	.input {
 		font-size: 16px;
 		background: none;
 		color: #000;
 		outline: 0;
 		border: 1px transparent;
 	}
-	span.rich-search-key {
-		margin-right: 2px;
+	span {
+		display: inline-block;
+	}
+	span.key {
+		margin-right: 6px;
 		font-weight: bold;
 		
 		&:after {
 			content: ':';
 		}
 	}
+	span.value {
+		padding-right: 26px;
+	}
+	@include bp(s){
+		li {
+			&.complete {
+				display: inline-block;
+				width: auto;
+			}
+		}
+	}
+	@include bp(m){
+		li {
+			width: auto;
+			margin: 3px 6px 3px 0;
+			display: inline-block;
+			width: auto;
+		}
+		span {
+			display: inline-block;
+		}
+	}
 }
-
-span.rich-search-close {
-	border: 1px solid #aaa;
-	border-radius: 10px;
+span.close {
+	border: 1px solid #A5A5A5;
+	border-radius: 20px;
 	color: #aaa;
 	line-height: 15px;
-	width: 15px;
-	height: 15px;
-	display: inline-block;
+	width: 22px;
+	height: 22px;
+	display: block;
 	text-align: center;
 	vertical-align: baseline;
 	cursor: pointer;
-	margin-left: 5px;
 	font-weight: bold;
+	position: absolute;
+	top: 50%;
+	right: 8px;
+	margin: -11px 0 0;
 	
 	&:hover {
 		border: 1px solid dodgerblue;
 		color: dodgerblue;
 	}
 }
-
 .rich-search-suggestions-container {
 	float: left;
 	background: #333;
 	color: #eee;
 	position: absolute;
-	margin: 7px 0 0;
 	max-height: 210px;
 	overflow: auto;
 	
@@ -96,16 +130,16 @@ span.rich-search-close {
 	li {
 		padding: 2px 5px;
 		
-		&.rich-search-hover {
+		&.hover {
 			background: #0556A3;
 			cursor: pointer;
 		}
-		&.rich-search-active {
+		&.active {
 			background-color: dodgerblue;
 		}
 	}
 }
-span.rich-search-operator {
+span.operator {
 	color: #999;
 	font-size: .8em;
 	margin: 0 4px;
