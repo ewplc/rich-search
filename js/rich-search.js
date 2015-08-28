@@ -47,7 +47,11 @@
           //$.each(filter.values, function(optionName, optionValue) {
           //  if (optionValue === value) {
               $(filter.inputElement).val(value);
+
               if (!silent){
+                //reset the pager index to 1 so the results display from page 1 and not the previoud page index
+                form.find('input[name="deals_page"]').val(1);
+console.log('addFilter()');
                 changed();
               }
           //  }
@@ -319,6 +323,7 @@
   var VirtualInputBoxController = function($form, formController, suggestionController) {
     $form.hide();
 
+
     var container = $('<div>')
       .insertAfter($form)
       .addClass('rich-search-container')
@@ -329,6 +334,15 @@
           focusOnCurrent();
         }
       });
+
+    //custom event that fires when a rich-search form's AJAX has completed
+    $form.on('ajaxComplete:richSearch', function(){
+      //focus on current filter to force suggestions to update (bit crude but works)
+      setTimeout(function(){
+        //needed a short delay in order to display correct values
+        container.trigger('click');
+      }, 10);
+    });
 
     var list = $('<ul />')
       .addClass('rich-search-terms')
@@ -376,7 +390,6 @@
           acceptUserSubmittedValue($input.val(), true);
         }
       }
-
       return true;
     });
 
@@ -508,7 +521,6 @@
         .data('state', 'new')//tells us how far along the process of adding a filter we are
         .addClass('active new')
         .append(inputEl)
-        // .append($.thinkingIcon())
         .appendTo(list);
 
       suggestionController.updateCurrentInputElement(inputEl);
@@ -767,6 +779,7 @@
             incompleteFilter.children('input').focus();
           }
           else {
+            //start a new filter
             createFilterKey();
           }
           break;
@@ -871,13 +884,6 @@
     }());
   }
 
-  $.thinkingIcon = function(){
-    var icon = $('<div class="gui-thinker" />');
-
-    for (var i = 1; i < 13; i++){
-      icon.append($('<span class="dot dot'+i+'" />'));
-    }
-    return icon;
-  };
+  
 
 })(jQuery);
