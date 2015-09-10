@@ -41,19 +41,26 @@
     };
 
     this.addFilter = function(key, value, silent) {
+      if (key == 'keywords'){
+        //keep this consistent with the form field's label value
+        key = 'Keywords';
+      }
       silent = Boolean(silent);
+
       $.each(filters, function(i, filter) {
         if (filter.label === key) {
           //$.each(filter.values, function(optionName, optionValue) {
           //  if (optionValue === value) {
+            if ($.isArray(value)){
+              $(filter.inputElement).val(value.join(' '));
+            }
+            else {
               $(filter.inputElement).val(value);
+            }
 
-              if (!silent){
-                //reset the pager index to 1 so the results display from page 1 and not the previoud page index
-                form.find('input[name="deals_page"]').val(1);
-console.log('addFilter()');
-                changed();
-              }
+            if (!silent){
+              changed();
+            }
           //  }
           //});
         }
@@ -74,7 +81,7 @@ console.log('addFilter()');
 
     simpleInputs.each(function() {
       var $input = $(this),
-          label = form.find('label[for=' + $input.attr('id') + '], label[for=' + $input.attr('name') + ']').text(),
+          label = form.find('label[for=' + $input.attr('id') + '], label[for=' + $input.attr('name') + ']').text().trim(),
           values = {};
 
       if ($input.is('select')) {
@@ -102,19 +109,17 @@ console.log('addFilter()');
   };
 
   var SuggestionController = function(formController, resolve) {
-    var pub = {};//public functions and vars
+    var pub = {};
 
     pub.suggestionContainer = $('<div />').addClass('rich-search-suggestions-container');
 
     var currentInputElement = null,
         container = null,
-        // suggestionContainer = $('<div />').addClass('rich-search-suggestions-container'),
         suggestionList = $('<ul />').appendTo(pub.suggestionContainer),
         lastValues = [],
         closing;
 
     /**
-     *
      * @param values {Array}
      */
     function buildSuggestionDropdown(values) {
@@ -127,11 +132,6 @@ console.log('addFilter()');
         if (closing){
           window.clearTimeout(closing);
         }
-        /*pub.suggestionContainer
-          .show()
-          .offset({
-            left: currentInputElement.offset().left
-          });*/
         pub.positionSuggestions(currentInputElement);
       }
       else {
@@ -148,7 +148,7 @@ console.log('addFilter()');
         $.each(items, function(i, item) {
           suggestionList.append(
             $('<li />')
-              .text(item[1])
+              .html(item[1])
               .on('click', function(e){
                 $(this).addClass('active');
                 pub.suggestionContainer.hide();
@@ -235,7 +235,6 @@ console.log('addFilter()');
     };
 
     pub.updateSuggestions = function(type, userTyped, key) {
-      // console.log(userTyped);
       if (type == 'key') {
         pub.getKeySuggestions(userTyped, buildSuggestionDropdown);
       }
@@ -321,19 +320,42 @@ console.log('addFilter()');
    * @constructor
    */
   var VirtualInputBoxController = function($form, formController, suggestionController) {
-    $form.hide();
+    var container = $('<div>'),
+        activeFilterItem = null,
+        closeIcon = function(){
+          return $('<span><i>&times;</i></span>');
+        },
+        list = $('<ul />')
+          .addClass('rich-search-terms')
+          .appendTo(container)
 
+          //click to edit existing filterItem's
+          .on('click', 'li', function(e){
+            if ($(this).hasClass('complete')){
+              //check if its a keyword filterItem
+              if ($(this).hasClass('type-keyword')){
+                editPreviousFilterTypeKeyword( $(this) );
+              }
+              else {
+                editPreviousFilterValue( $(this) );
+              }
+            }
+            else {
+              if ($(this).children('input').length > 0){
+                focusOnSelected($(this));
+              }
+            }
+          });
 
-    var container = $('<div>')
-      .insertAfter($form)
+    container
       .addClass('rich-search-container')
+      .insertAfter($form)
       .on('click', function(e){
-        var el = $(e.target);
-
-        if (el.is('div') || el.is('ul')){
+        if ($(e.target).is('div') || $(e.target).is('ul')){
           focusOnCurrent();
         }
       });
+
 
     //custom event that fires when a rich-search form's AJAX has completed
     $form.on('ajaxComplete:richSearch', function(){
@@ -344,44 +366,11 @@ console.log('addFilter()');
       }, 10);
     });
 
-    var list = $('<ul />')
-      .addClass('rich-search-terms')
-      .appendTo(container)
-
-      //click to edit existing filterItem's
-      .on('click', 'li', function(e){
-        if ($(this).hasClass('complete')){
-          //check if its a keyword filterItem
-          if ($(this).hasClass('type-keyword')){
-            editPreviousFilterTypeKeyword( $(e.target).parent('li') );
-          }
-          else {
-            editPreviousFilterValue( $(this) );
-          }
-        }
-        else {
-          if ($(this).children('input').length > 0){
-            focusOnSelected($(this));
-          }
-        }
-      });
-
-    var STATES = {
-      'WAITING': 'WAITING',
-      'INKEY': 'INKEY',
-      'INVALUE': 'INVALUE'
-    };
-
-    var activeFilterItem = null,
-        state = STATES.WAITING,
-        prepopulated = false;
-
     createFilterKey();
     $.each(formController.getFilters(), function (i, filter) {
       var $input = $(filter.inputElement);
 
       if ($input.val() || $input.val() !== '') {
-        prepopulated = true;
         acceptUserSubmittedKey(filter.label, true);
         if (filter.inputElement.is('select')) {
           acceptUserSubmittedValue(filter.inputElement.find('option[value=' + $input.val() + ']').text(), true);
@@ -392,7 +381,6 @@ console.log('addFilter()');
       }
       return true;
     });
-
 
     var inputKeyupEventCallback = function(type, e){
       var keyCode = e.which || e.keyCode,
@@ -456,7 +444,7 @@ console.log('addFilter()');
           var elementInputKey = filterItem.children('input.key');
           //handle going back to previous filterItem from a empty key field on 'backspace'
           //check if key input field exists (is being edited) && is empty
-          if (elementInputKey.length > 0 && !elementInputKey.val()){// && filterItem.data('state', 'edit-key')){
+          if (elementInputKey.length > 0 && !elementInputKey.val()){
             //check that more than 1 fieldItem exists
             if (list.children('li').length > 1){
               //prevent deletion of the last character in the value input field when we switch to previous filterItem
@@ -561,6 +549,13 @@ console.log('addFilter()');
       //we arent interested in the Value element but it prepares the filterItem nicely for editing the Key
       editPreviousFilterValue(filterItem);
 
+      //update keyword filters as we're editing a keyword filter, let's have the results update to show this filter is not affecting results until saved again
+      formController.addFilter(
+        filterItem.children('span.key').text(),
+        getKeywordFilterValues(),
+        false
+      );
+
       filterItem
         .removeClass('type-keyword')
         .children('span.key').text(keywordValue).end()
@@ -582,13 +577,12 @@ console.log('addFilter()');
         .removeClass('active')
         .addClass('incomplete');
       
-      var elementSpanValue = activeFilterItem.children('span.value');
+      var elementSpanValue = activeFilterItem.children('span.value'),
+          value = elementSpanValue.text().trim(),
+          inputEl = createFilterValue();
 
       //remove any "AND" operator elements so they don't get printed literally in our input field
       elementSpanValue.find('span.operator').replaceWith(' ');
-
-      var value = elementSpanValue.text().trim(),
-          inputEl = createFilterValue();
 
       //remove the selected key from 'filters' array so it will appear as a selectable suggestionController option
       formController.removeFilter(activeFilterItem.children('span.key').text());
@@ -654,8 +648,6 @@ console.log('addFilter()');
         });
 
       activeFilterItem.append(inputEl);
-      suggestionController.updateCurrentInputElement(inputEl);
-
       inputEl.focus();
 
       return inputEl;
@@ -670,20 +662,16 @@ console.log('addFilter()');
         keyText = key;
       }
       else {
-        // suggestionController.getKeySuggestions(key, function(keys) {
-          activeFilterItem.children('input.key').remove();
+        activeFilterItem.children('input.key').remove();
 
-          // if ($.isEmptyObject(keys)) {
-            //no suggested key values were found so this will be treated as a keyword filter
-          if (!suggestionController.isSelected()){
-            //no suggestion was selected so we'll treat this as a keyword filter
-            keyText = key.trim().indexOf(' ') >= 0 ? 'keywords' : 'keyword';
-            keywordFilter = true;
-          }
-          else {
-            keyText = key;
-          }
-        // });
+        if (!suggestionController.isSelected()){
+          //no suggestion was selected so we'll treat this as a keyword filter
+          keyText = 'Keywords';
+          keywordFilter = true;
+        }
+        else {
+          keyText = key;
+        }
       }
 
       if (keywordFilter){
@@ -703,7 +691,7 @@ console.log('addFilter()');
 
       if (keywordFilter){
         activeFilterItem.addClass('type-keyword');
-        acceptUserSubmittedValue(key);
+        acceptUserSubmittedValue(key, false);
       }
       else {
         switchFilterItem();
@@ -711,15 +699,16 @@ console.log('addFilter()');
     }
 
     function acceptUserSubmittedValue(value, silent) {
-      var key = activeFilterItem.children('span.key').text();
+      var key = activeFilterItem.children('span.key').text(),
+          keywordFilter = activeFilterItem.hasClass('type-keyword');
 
       activeFilterItem.children('input.value').remove();
       
       var label = $('<span>')
         .addClass('value')
-        .append($('<span>&times;</span>'));
+        .append(closeIcon());
       
-      if (key == 'keyword' || key == 'keywords') {
+      if (keywordFilter) {
         label.html(value.split(' ').join('<span class="operator">AND</span>'));
       }
       else {
@@ -732,16 +721,32 @@ console.log('addFilter()');
         .removeClass('active incomplete')
         .addClass('complete')
         .append(
-          $('<span>&times;</span>')
-            .on('click', (function(el){
+          closeIcon()
+            .on('click', (function(li){
               return function(e){
-                formController.removeFilter(el.children('span.key').text());
                 $(e.target).off('click', e.handle);
-                el.remove();
+
+                if (li.hasClass('type-keyword')){
+                  li.remove();
+
+                  formController.addFilter(
+                    li.children('span.key').text(),
+                    getKeywordFilterValues(),
+                    false
+                  );
+                }
+                else {
+                  formController.removeFilter(li.children('span.key').text());
+                  li.remove();
+                }
               }
             })(activeFilterItem))
             .addClass('close')
         );
+
+      if (keywordFilter){
+        value = getKeywordFilterValues();
+      }
 
       formController.addFilter(
         activeFilterItem.children('span.key').text(),
@@ -750,6 +755,14 @@ console.log('addFilter()');
       );
 
       switchFilterItem();
+    }
+
+    //get all keyword filterItem's and return an array of their values
+    function getKeywordFilterValues(){
+      return $.map(list.find('.type-keyword .value'), function(el){
+        //remove any span elements like span.operator and return just text Strings
+        return $(el).clone().find('span').replaceWith(' ').end().text();
+      });
     }
 
     //create new or edit next incomplete filterItem
@@ -799,8 +812,11 @@ console.log('addFilter()');
     options = $.extend({}, DEFAULTS, options);
 
     return this.each(function() {
-      if (!$(this).is('form')) return false;
+      if (!$(this).is('form')){
+        return false;
+      }
       var instance = $.data(this, 'RichSearch');
+      
       if (!instance) {
         instance = new RootController(this, options);
         $.data(this, 'RichSearch', instance);
