@@ -117,6 +117,7 @@ span.close {
   color: #eee;
   float: left;
   max-height: 210px;
+  min-width: 200px;
   overflow: auto;
   position: absolute;
   z-index: 99; }
