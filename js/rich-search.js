@@ -472,7 +472,7 @@
 
 
     function buildKeyElement() {
-      return $('<input type="text" placeholder="Search by keyword or field" size="42" />')
+      return $('<input type="text" placeholder="Search by keyword or field" size="32" />')
         .addClass('input key')
         .on('richsearch:accept', function(e) {
           acceptUserSubmittedKey(e.target.value);
