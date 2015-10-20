@@ -366,7 +366,7 @@
       }, 10);
     });
 
-    createFilterKey();
+    createFilterKey(true);
     $.each(formController.getFilters(), function (i, filter) {
       var $input = $(filter.inputElement);
 
@@ -502,7 +502,7 @@
         });
     }
 
-    function createFilterKey() {
+    function createFilterKey(init) {
       var inputEl = buildKeyElement();
 
       activeFilterItem = $('<li />')
@@ -513,7 +513,9 @@
 
       suggestionController.updateCurrentInputElement(inputEl);
 
-      inputEl.focus();
+      if (!init){
+        inputEl.focus();
+      }
     }
 
     function editPreviousFilterKey(filterItem) {
@@ -793,7 +795,7 @@
           }
           else {
             //start a new filter
-            createFilterKey();
+            createFilterKey(false);
           }
           break;
       }
