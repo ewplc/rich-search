@@ -472,7 +472,7 @@
 
 
     function buildKeyElement() {
-      return $('<input type="text" placeholder="Search by keyword or field" size="32" />')
+      return $('<input type="text" placeholder="Search by keyword or field" autocomplete="off" size="32" />')
         .addClass('input key')
         .on('richsearch:accept', function(e) {
           acceptUserSubmittedKey(e.target.value);
@@ -534,7 +534,7 @@
         .data('state', 'edit-key')
         .append(inputEl);
 
-      inputEl.focus();
+      focusOnCurrent();
 
       suggestionController.updateCurrentInputElement(inputEl);
       suggestionController.updateSuggestions('key', value);
@@ -598,13 +598,14 @@
         .append(inputEl)
         .children('span.close').remove();
 
-      inputEl.val(value).focus();
+      inputEl.val(value);
+      focusOnCurrent();
       suggestionController.updateCurrentInputElement(inputEl);
       suggestionController.updateSuggestions('value', value);
     }
 
     function createFilterValue() {
-      var inputEl = $('<input type="text">')
+      var inputEl = $('<input type="text" autocomplete="off">')
         .addClass('input value')
         .on('richsearch:accept', function(e) {
           acceptUserSubmittedValue(e.target.value);
@@ -806,7 +807,7 @@
     };
 
     var focusOnSelected = function(item){
-      item.children('input').focus();
+      item.children('input').focus().setCursorPosition(9999);
     };
   };
 
