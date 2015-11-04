@@ -49,20 +49,16 @@
 
       $.each(filters, function(i, filter) {
         if (filter.label === key) {
-          //$.each(filter.values, function(optionName, optionValue) {
-          //  if (optionValue === value) {
-            if ($.isArray(value)){
-              $(filter.inputElement).val(value.join(' '));
-            }
-            else {
-              $(filter.inputElement).val(value);
-            }
+          if ($.isArray(value)){
+            $(filter.inputElement).val(value.join(' '));
+          }
+          else {
+            $(filter.inputElement).val(value);
+          }
 
-            if (!silent){
-              changed();
-            }
-          //  }
-          //});
+          if (!silent){
+            changed();
+          }
         }
       });
     };
@@ -71,7 +67,7 @@
       return !$(input).is(':file,:button,:submit,:reset,:image,textarea,:disabled,[type=hidden]');
     }
 
-    function changed() {
+    function changed(){
       form.submit();
     }
 
@@ -105,7 +101,6 @@
         }
       });
     });
-
   };
 
   var SuggestionController = function(formController, resolve) {
@@ -366,14 +361,17 @@
       }, 10);
     });
 
-    createFilterKey(true);
-    $.each(formController.getFilters(), function (i, filter) {
+    var init = true;
+    createFilterKey(init);
+
+    //populate search box with existing form values
+    $.each(formController.getFilters(), function(i, filter){
       var $input = $(filter.inputElement);
 
-      if ($input.val() || $input.val() !== '') {
+      if ($input.val() || $input.val() !== ''){
         acceptUserSubmittedKey(filter.label, true);
-        if (filter.inputElement.is('select')) {
-          acceptUserSubmittedValue(filter.inputElement.find('option[value=' + $input.val() + ']').text(), true);
+        if (filter.inputElement.is('select')){
+          acceptUserSubmittedValue(filter.inputElement.find('option[value="' + $input.val() + '"]').text(), true);
         }
         else {
           acceptUserSubmittedValue($input.val(), true);
