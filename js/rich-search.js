@@ -81,7 +81,7 @@
 
     simpleInputs.each(function() {
       var $input = $(this),
-          label = form.find('label[for=' + $input.attr('id') + '], label[for=' + $input.attr('name') + ']').text().trim(),
+          label = form.find('label[for="' + $input.attr('id') + '"], label[for="' + $input.attr('name') + '"]').text().trim(),
           values = {};
 
       if ($input.is('select')) {
@@ -373,7 +373,7 @@
       if ($input.val() || $input.val() !== '') {
         acceptUserSubmittedKey(filter.label, true);
         if (filter.inputElement.is('select')) {
-          acceptUserSubmittedValue(filter.inputElement.find('option[value=' + $input.val() + ']').text(), true);
+          acceptUserSubmittedValue(filter.inputElement.find('option[value="' + $input.val() + '"]').text(), true);
         }
         else {
           acceptUserSubmittedValue($input.val(), true);
