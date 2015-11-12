@@ -56,6 +56,10 @@
 		color: #000;
 		outline: 0;
 		border: 1px transparent;
+		-webkit-appearance: none;
+		-moz-appearance: none;
+		appearance: none;
+		-webkit-text-size-adjust: none;
 	}
 	span {
 		display: inline-block;
