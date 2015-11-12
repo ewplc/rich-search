@@ -55,7 +55,11 @@
     background: none;
     color: #000;
     outline: 0;
-    border: 1px transparent; }
+    border: 1px transparent;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    -webkit-text-size-adjust: none; }
   .rich-search-terms span {
     display: inline-block; }
   .rich-search-terms span.key {
