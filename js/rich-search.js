@@ -77,7 +77,7 @@
 
     simpleInputs.each(function() {
       var $input = $(this),
-          label = form.find('label[for="' + $input.attr('id') + '"], label[for="' + $input.attr('name') + '"]').text().trim(),
+          labelText = form.find('label[for="' + $input.attr('id') + '"], label[for="' + $input.attr('name') + '"]').text().trim(),
           values = {};
 
       if ($input.is('select')) {
