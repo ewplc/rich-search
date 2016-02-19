@@ -28,12 +28,23 @@
     border-radius: 20px;
     width: 100%;
     display: block; }
+    .rich-search-terms li:before, .rich-search-terms li:after {
+      content: "\0020";
+      display: block;
+      height: 0;
+      overflow: hidden; }
+    .rich-search-terms li:after {
+      clear: both; }
     .rich-search-terms li.new, .rich-search-terms li.active {
       box-shadow: 0 2px 1px #EEE inset;
       -moz-box-shadow: 0 2px 1px #EEE inset;
       -webkit-box-shadow: 0 2px 1px #EEE inset;
       -ms-box-shadow: 0 2px 1px #EEE inset;
       -o-box-shadow: 0 2px 1px #EEE inset; }
+      .rich-search-terms li.new span.key,
+      .rich-search-terms li.new .input, .rich-search-terms li.active span.key,
+      .rich-search-terms li.active .input {
+        float: left; }
     .rich-search-terms li.focus {
       border: 1px solid #51cbee;
       box-shadow: 0 0 5px #51cbee;
@@ -54,6 +65,7 @@
     font-size: 16px;
     background: none;
     color: #000;
+    display: block;
     outline: 0;
     border: 1px transparent;
     -webkit-appearance: none;

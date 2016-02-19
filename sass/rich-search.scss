@@ -30,10 +30,16 @@
 		border-radius: 20px;
 		width: 100%;
 		display: block;
+		@include clear();
 		
 		&.new,
 		&.active {
 			@include box-shadow(0 2px 1px #EEE inset);
+
+			span.key,
+			.input {
+				float: left;
+			}
 		}
 		&.focus {
 			border: 1px solid rgba(81, 203, 238, 1);
@@ -54,6 +60,7 @@
 		font-size: 16px;
 		background: none;
 		color: #000;
+		display: block;
 		outline: 0;
 		border: 1px transparent;
 		-webkit-appearance: none;
