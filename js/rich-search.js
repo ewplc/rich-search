@@ -210,18 +210,16 @@
 
       $.each(filters, function(i, filter) {
         if (filter.label === key) {
-          // console.log(filter);
           return resolve(filter, function(updatedFilter) {
-            // console.log(updatedFilter);
             filters[i] = updatedFilter;
 
             var output = {};
             for (var i in updatedFilter.values) {
-              // if (Boolean(updatedFilter.values[i])){
+              if (updatedFilter.values[i]){
                 if (updatedFilter.values[i].toLowerCase().indexOf(startsWith.toLowerCase()) === 0) {
                   output[i] = updatedFilter.values[i];
                 }
-              // }
+              }
             }
             return cb(output);
           });
