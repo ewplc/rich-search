@@ -49,11 +49,26 @@
 
       $.each(filters, function(i, filter) {
         if (filter.label === key) {
+          $input = $(filter.inputElement);
+
           if ($.isArray(value)){
-            $(filter.inputElement).val(value.join(' '));
+            //join separate words into one String
+            value = value.join(' ');
+          }
+
+          if ($input.is('select')){
+            //is <select> so check <option> element values
+            $input.find('option').filter(function(){
+              //match field value as lowercase String
+              return $(this).val().toLowerCase() == value.toLowerCase();
+            }).prop('selected', true);
           }
           else {
-            $(filter.inputElement).val(value);
+            //is <input>
+            $input.filter(function(){
+              //match field value as lowercase String
+              return $(this).val().toLowerCase() == value.toLowerCase();
+            }).val(value);
           }
 
           if (!silent){
@@ -119,7 +134,7 @@
      */
     function buildSuggestionDropdown(values) {
       if (!$.isPlainObject(values)) throw '"values" must be an object';
-
+      
       if ($.isEmptyObject(values)) {
         pub.suggestionContainer.hide();
       }
