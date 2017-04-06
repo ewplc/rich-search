@@ -152,7 +152,7 @@
           items.push([name, value]);
         });
         items.sort(function(a, b) {
-          a[1].localeCompare(b[1]);
+          return a[1].localeCompare(b[1]);
         });
 
         $.each(items, function(i, item) {
