@@ -663,6 +663,12 @@
                 editPreviousFilterKey(activeFilterItem);//go back to editing key field
               }
               break;
+            case 9: //tab
+              e.preventDefault();
+              if (suggestionController.isOpen() && suggestionController.isSelected()) {
+                suggestionController.chooseCurrent();
+              }
+              break;
           }
         });
 
@@ -683,7 +689,6 @@
       else {
         activeFilterItem.children('input.key').remove();
 
-        console.log(formController.getFilters(), formController.getKeysInUse());
         if (!suggestionController.isSelected() || $.grep(formController.getFilters(), function(filter) {
           return filter.label == key;
         }).length == 0){
