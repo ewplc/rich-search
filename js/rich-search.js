@@ -488,7 +488,7 @@
 
 
     function buildKeyElement() {
-      return $('<input type="text" placeholder="Search by keyword or field" autocomplete="off" size="32" />')
+      return $('<input type="text" placeholder="Search by keyword or field" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" size="32" />')
         .addClass('input key')
         .on('richsearch:accept', function(e) {
           acceptUserSubmittedKey(e.target.value);
@@ -621,7 +621,7 @@
     }
 
     function createFilterValue() {
-      var inputEl = $('<input type="text" autocomplete="off">')
+      var inputEl = $('<input type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">')
         .addClass('input value')
         .on('richsearch:accept', function(e) {
           acceptUserSubmittedValue(e.target.value);
@@ -673,7 +673,9 @@
         });
 
       activeFilterItem.append(inputEl);
-      inputEl.focus();
+      window.setTimeout(function() {
+        inputEl.focus();
+      }, 0);
 
       return inputEl;
     }
