@@ -181,7 +181,7 @@
 
         //highlight the first suggestion for the Value input field only. The Key field should allow keywords
         // if (inputType == 'value'){
-          // suggestionList.children().first().addClass('active');
+        suggestionList.children().first().addClass('active');
         // }
       }
 
@@ -400,10 +400,9 @@
 
       switch (keyCode){
         case 13://enter
-        case 9://tab
           e.preventDefault();
 
-          if (keyCode === 13 && suggestionController.isOpen() && suggestionController.isSelected()) {
+          if (suggestionController.isOpen() && suggestionController.isSelected()) {
             suggestionController.chooseCurrent();
           }
           else {
@@ -476,6 +475,12 @@
               //remove the empty filterItem
               filterItem.remove();
             }
+          }
+          break;
+        case 9: //tab
+          e.preventDefault();
+          if (suggestionController.isOpen() && suggestionController.isSelected()) {
+            suggestionController.chooseCurrent();
           }
           break;
       }
@@ -678,8 +683,11 @@
       else {
         activeFilterItem.children('input.key').remove();
 
-        if (!suggestionController.isSelected()){
-          //no suggestion was selected so we'll treat this as a keyword filter
+        console.log(formController.getFilters(), formController.getKeysInUse());
+        if (!suggestionController.isSelected() || $.grep(formController.getFilters(), function(filter) {
+          return filter.label == key;
+        }).length == 0){
+          //no suggestion was selected or the accepted key is not in the list so we'll treat this as a keyword filter
           keyText = 'Keywords';
           keywordFilter = true;
         }
