@@ -65,10 +65,7 @@
           }
           else {
             //is <input>
-            $input.filter(function(){
-              //match field value as lowercase String
-              return $(this).val().toLowerCase() == value.toLowerCase();
-            }).val(value);
+            $input.val(value);
           }
 
           if (!silent){
